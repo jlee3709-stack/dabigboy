@@ -1,18 +1,29 @@
-const http = require('http');
-const request = require('request');
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors');
+const path = require('path');
 
-const server = http.createServer((req, res) => {
-    const url = req.url.slice(1); // remove leading '/' from the URL
-    const options = {
-        url: url,
-        method: req.method,
-        headers: req.headers
-    };
+const app = express();
 
-    req.pipe(request(options)).pipe(res);
-});
+// Enable CORS
+app.use(cors());
 
-const PORT = 3000;
-server.listen(PORT, () => {
-     console.log(`Proxy server is running on port ${PORT}`);
+// Serve static files from current directory
+app.use(express.static(path.join(__dirname)));
+
+// Proxy middleware
+app.use('/proxy/', createProxyMiddleware({
+    changeOrigin: true,
+    pathRewrite: {
+        '^/proxy/': ''
+    },
+    onError: (err, req, res) => {
+        res.status(500).send('Proxy Error: ' + err.message);
+    }
+}));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Proxy server is running on port ${PORT}`);
+    console.log(`Access it at http://localhost:${PORT}`);
 });
